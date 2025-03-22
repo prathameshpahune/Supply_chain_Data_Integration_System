@@ -30,38 +30,6 @@ def load_and_clean_data(file_path):
         logging.error(f"Error in loading or cleaning data: {e}")
         raise
 
-# def create_dimension_and_fact_tables(df):
-#     """
-#     Create dimension and fact tables from the cleaned data.
-#     """
-#     try:
-#         logging.info("Creating dimension tables...")
-#         dim_customer, dim_product, dim_shipping, dim_region, date_dim = create_dimension_tables(df)
-#         logging.info("Dimension tables created successfully.")
-
-#         logging.info("Creating fact table...")
-#         fact_sales = create_fact_table(df, dim_customer, dim_product, dim_shipping, dim_region, date_dim)
-
-#         return dim_customer, dim_product, dim_shipping, dim_region, fact_sales, date_dim
-#     except Exception as e:
-#         logging.error(f"Error in creating dimension or fact tables: {e}")
-#         raise
-
-# def save_and_insert_to_database(engine, dim_customer, dim_product, dim_shipping, dim_region, fact_sales, date_dim):
-#     """
-#     Save dimension tables to database and insert fact table.
-#     """
-#     try:
-#         logging.info("Creating database tables...")
-#         create_tables(engine)
-
-#         logging.info("Inserting dimension and fact tables into the database...")
-#         insert_data_row_by_row(engine, dim_customer, dim_product, dim_shipping, dim_region, fact_sales, date_dim)
-#         logging.info("Data inserted into the database successfully.")
-#     except Exception as e:
-#         logging.error(f"Error inserting data into the database: {e}")
-#         raise
-
 if __name__ == "__main__":
     file_path = 'train.csv'
 
