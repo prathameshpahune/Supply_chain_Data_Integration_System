@@ -1,5 +1,3 @@
-# kpi.py
-
 import pandas as pd
 import logging
 from sqlalchemy import create_engine
