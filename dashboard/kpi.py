@@ -57,7 +57,6 @@ def customer_count_segment(dim_customer):
     return segment_group
 
 
-
 def monthly_sales_trend(fact_df, dim_date):
     merged = fact_df.merge(dim_date[['DateKey', 'Month', 'Year']], left_on='OrderDateKey', right_on='DateKey', how='left')
     merged['Month_Year'] = merged['Month'].astype(str) + '-' + merged['Year'].astype(str)

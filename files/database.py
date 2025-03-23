@@ -113,43 +113,20 @@ def save_and_insert_to_database(engine, dim_customer, dim_product, dim_shipping,
             raise
 
 
-
-# def save_and_insert_to_database(engine, dim_customer, dim_product, dim_shipping, dim_region, fact_sales, dim_date):
-#     # SQLAlchemy engine
-#     # engine = create_engine(f'{DATABASE_URL}')
-#     # Dictionary mapping table names to DataFrames
-#     tables = {
-#         'dim_customer': dim_customer,
-#         'dim_product': dim_product,
-#         'dim_shipping': dim_shipping,
-#         'dim_region': dim_region,
-#         'fact_sales': fact_sales,
-#         'dim_date': dim_date
-#     }
-
-#     # Insert data into MySQL
-#     for table_name, df in tables.items():
-#         try:
-#             logging.info(f"Inserting data into {table_name}...")
-#             df.to_sql(name=table_name, con=engine, if_exists='append', index=False)
-#             logging.info(f"Data inserted successfully into {table_name}.")
-#         except Exception as e:
-#             logging.error(f"Error inserting data into {table_name}: {e}")
-
-    # engine.dispose()
+# engine.dispose()
 
 
 
-def fetch_data_from_mysql(engine):
-    """
-    Fetch data from MySQL to verify the insertion.
-    """
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT * FROM fact_sales;"))
-            fact_sales_data = result.fetchall()
-            logging.info(f"Fetched data: {fact_sales_data}")
-            return fact_sales_data
-    except Exception as e:
-        logging.error(f"Error fetching data: {e}")
-        raise
+# def fetch_data_from_mysql(engine):
+#     """
+#     Fetch data from MySQL to verify the insertion.
+#     """
+#     try:
+#         with engine.connect() as conn:
+#             result = conn.execute(text("SELECT * FROM fact_sales;"))
+#             fact_sales_data = result.fetchall()
+#             logging.info(f"Fetched data: {fact_sales_data}")
+#             return fact_sales_data
+#     except Exception as e:
+#         logging.error(f"Error fetching data: {e}")
+#         raise
