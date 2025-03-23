@@ -58,20 +58,19 @@ def create_dimension_tables(df):
         dim_product = df[['Product_ID', 'Category', 'Sub_Category', 'Product_Name']].drop_duplicates().reset_index(drop=True)
         dim_product['ProductKey'] = dim_product.index + 1
 
-        # Unique shipping info
-        dim_shipping = df[['Order_ID', 'Order_Date', 'Ship_Mode', 'Ship_Date']].drop_duplicates().reset_index(drop=True)
+        # Unique shipping info (ONLY Ship_Mode now)
+        dim_shipping = df[['Ship_Mode']].drop_duplicates().reset_index(drop=True)
         dim_shipping['ShippingKey'] = dim_shipping.index + 1
 
         # Unique regions
         dim_region = df[['Country', 'City', 'State', 'Postal_Code', 'Region']].drop_duplicates().reset_index(drop=True)
         dim_region['RegionKey'] = dim_region.index + 1
 
-        # Create date dimension based on min/max of Order_Date and Ship_Date
+        # Date dimension
         min_date = df[['Order_Date', 'Ship_Date']].min().min()
         max_date = df[['Order_Date', 'Ship_Date']].max().max()
 
         date_range = pd.date_range(start=min_date, end=max_date, freq='D')
-
         date_dim = pd.DataFrame(date_range, columns=['Date'])
         date_dim['Day'] = date_dim['Date'].dt.day
         date_dim['Month'] = date_dim['Date'].dt.month
@@ -83,12 +82,11 @@ def create_dimension_tables(df):
         date_dim['Is_Weekend'] = date_dim['Date'].dt.weekday >= 5
         date_dim['DateKey'] = date_dim['Date'].dt.strftime('%Y%m%d').astype(int)
 
-        # Reorder columns for clarity
+        # Reorder columns
         date_dim = date_dim[['DateKey', 'Date', 'Day', 'Month', 'Quarter', 'Year',
                              'Month_Name', 'Day_Of_Week', 'Day_Of_Year', 'Is_Weekend']]
-    
 
-        logging.info("Dimension tables including date dimension created successfully.")
+        logging.info("Dimension tables created successfully.")
         return dim_customer, dim_product, dim_shipping, dim_region, date_dim
 
     except Exception as e:
@@ -96,29 +94,39 @@ def create_dimension_tables(df):
         raise
 
 
-def create_fact_table(df, dim_customer, dim_product, dim_shipping, dim_region, dim_date):
+def create_fact_table(df, dim_customer, dim_product, dim_shipping, dim_region, date_dim):
     """
-    Create fact_sales table by joining dimension tables and adding date keys.
+    Create the fact_sales table by joining with dimension tables and extracting surrogate keys.
     """
     try:
-        fact = df.merge(dim_customer[['Customer_ID', 'CustomerKey']], on='Customer_ID', how='left')
-        fact = fact.merge(dim_product[['Product_ID', 'ProductKey']], on='Product_ID', how='left')
-        fact = fact.merge(dim_shipping[['Order_ID', 'ShippingKey']], on='Order_ID', how='left')
-        fact = fact.merge(dim_region[['Country', 'RegionKey']], on='Country', how='left')
-        
-        # Merge with date dimension for OrderDateKey and ShipDateKey
-        fact = fact.merge(dim_date[['DateKey', 'Date']], left_on='Order_Date', right_on='Date', how='left')
-        fact = fact.rename(columns={'DateKey': 'OrderDateKey'}).drop('Date', axis=1)
-        fact = fact.merge(dim_date[['DateKey', 'Date']], left_on='Ship_Date', right_on='Date', how='left')
-        fact = fact.rename(columns={'DateKey': 'ShipDateKey'}).drop('Date', axis=1)
+        # Convert date columns
+        df['Order_Date'] = pd.to_datetime(df['Order_Date'])
+        df['Ship_Date'] = pd.to_datetime(df['Ship_Date'])
 
-        fact_sales = fact[['Order_ID', 'OrderDateKey', 'ShipDateKey', 'CustomerKey', 'ProductKey', 'ShippingKey', 'RegionKey', 'Sales']].copy()
+        # Merge dimension keys
+        df_fact = df.merge(dim_customer[['Customer_ID', 'CustomerKey']], on='Customer_ID', how='left')
+        df_fact = df_fact.merge(dim_product[['Product_ID', 'ProductKey']], on='Product_ID', how='left')
+        df_fact = df_fact.merge(dim_shipping[['Ship_Mode', 'ShippingKey']], on='Ship_Mode', how='left')
+        df_fact = df_fact.merge(dim_region[['Country', 'City', 'State', 'Postal_Code', 'Region', 'RegionKey']],
+                                on=['Country', 'City', 'State', 'Postal_Code', 'Region'], how='left')
 
-        logging.info("Fact table created successfully.")
+        # Merge date keys
+        df_fact = df_fact.merge(date_dim[['Date', 'DateKey']], left_on='Order_Date', right_on='Date', how='left')
+        df_fact = df_fact.rename(columns={'DateKey': 'OrderDateKey'}).drop('Date', axis=1)
+        df_fact = df_fact.merge(date_dim[['Date', 'DateKey']], left_on='Ship_Date', right_on='Date', how='left')
+        df_fact = df_fact.rename(columns={'DateKey': 'ShipDateKey'}).drop('Date', axis=1)
+
+        # Final fact table
+        fact_sales = df_fact[['Order_ID', 'OrderDateKey', 'ShipDateKey',
+                              'CustomerKey', 'ProductKey', 'ShippingKey', 'RegionKey', 'Sales']].copy()
+
+        logging.info(f"Fact table created successfully with {len(fact_sales)} rows.")
         return fact_sales
+
     except Exception as e:
-        logging.error(f"Failed to create fact table: {e}")
+        logging.error(f"Error while creating fact table: {e}")
         raise
+
 
 def create_dimension_and_fact_tables(df):
     """
@@ -137,11 +145,3 @@ def create_dimension_and_fact_tables(df):
     except Exception as e:
         logging.error(f"Error in creating dimension or fact tables: {e}")
         raise
-
-# if __name__ == "__main__":
-    # create_dimension_tables('train.scv');
-    # file_path = 'train.csv'
-    # df = load_and_clean_data(file_path)
-
-    # df = replace_nan_with_mode(df)  # Replace NaNs with mode here
-    # create_dimension_and_fact_tables(df)
