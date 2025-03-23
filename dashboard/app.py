@@ -16,7 +16,7 @@ from kpi import (
 )
 
 # Configure logging
-logging.basicConfig(filename='etl_process.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename='../etl_process.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load data once for all pages
 try:
@@ -57,7 +57,7 @@ def show_home_page():
 
 def show_diagram():
     try:
-        image = "etl.png"
+        image = "../etl.png"
         st.image(image, caption="Database ERD Diagram", use_container_width=True)
     except Exception as e:
         st.error(f"Error loading image: {e}")
@@ -140,7 +140,7 @@ def show_sales_trends_page():
         # Monthly Sales
         st.subheader("📅 Monthly Sales Trend")
         monthly_trend = monthly_sales_trend(fact_df, dim_date)
-        fig1, ax1 = plt.subplots(figsize=(10, 5))
+        fig1, ax1 = plt.subplots(figsize=(20, 5))
         sns.lineplot(data=monthly_trend, x='Month_Year', y='Sales', marker='o', ax=ax1)
         ax1.set_title('Monthly Sales')
         ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
@@ -149,7 +149,7 @@ def show_sales_trends_page():
         # Quarterly Sales
         st.subheader("📆 Quarterly Sales")
         q_sales = sales_by_quarter(fact_df, dim_date)
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        fig2, ax2 = plt.subplots(figsize=(20, 5))
         sns.barplot(data=q_sales, x='Quarter_Year', y='Sales', palette='Blues_d', ax=ax2)
         ax2.set_title('Quarterly Sales')
         ax2.set_xlabel('Quarter-Year')
@@ -160,7 +160,7 @@ def show_sales_trends_page():
         # Yearly Sales
         st.subheader("🗓️ Yearly Sales")
         yearly = sales_by_year(fact_df, dim_date)
-        fig3, ax3 = plt.subplots()
+        fig3, ax3 = plt.subplots(figsize=(20, 5))
         sns.barplot(data=yearly, x='Year', y='Sales', palette='coolwarm', ax=ax3)
         ax3.set_title('Yearly Sales')
         st.pyplot(fig3)
@@ -168,7 +168,7 @@ def show_sales_trends_page():
         # Weekend vs Weekday Pie Chart
         st.subheader("📆 Weekend vs Weekday Sales")
         weekend_data = weekend_sales(fact_df, dim_date)
-        fig4, ax4 = plt.subplots()
+        fig4, ax4 = plt.subplots(figsize=(5, 5))
         ax4.pie(weekend_data['Sales'], labels=weekend_data['Type'], autopct='%1.1f%%', colors=['#66b3ff', '#ff9999'])
         ax4.set_title('Weekend vs Weekday Sales')
         st.pyplot(fig4)
@@ -187,7 +187,7 @@ def show_sales_by_segment_page():
         st.subheader("📍 Top 5 States by Sales")
         top_states = top_states_sales(fact_df, dim_region)
         st.dataframe(top_states)
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(20, 7))
         sns.barplot(data=top_states, x='Sales', y='State', palette='viridis', ax=ax)
         ax.set_title('Top 5 States by Sales')
         st.pyplot(fig)
@@ -195,7 +195,7 @@ def show_sales_by_segment_page():
         # Customer Segment
         st.subheader("👤 Customer Segment Distribution")
         segment_count = customer_count_segment(dim_customer)
-        fig2, ax2 = plt.subplots()
+        fig2, ax2 = plt.subplots(figsize=(20, 7))
         sns.barplot(data=segment_count, x='Segment', y='Customer_Count', palette='pastel', ax=ax2)
         ax2.set_title('Customer Count by Segment')
         st.pyplot(fig2)
