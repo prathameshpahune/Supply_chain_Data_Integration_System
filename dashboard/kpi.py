@@ -1,165 +1,111 @@
+# kpi.py
+
 import pandas as pd
 import logging
 from sqlalchemy import create_engine
 
-# Set up logging
+DATABASE_URL = 'mysql+pymysql://root:root@localhost:3306/SALES'
+engine = create_engine(DATABASE_URL)
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def fetch_data_from_mysql(query):
-    """
-    Fetch data from MySQL database.
-    """
+def fetch_data(query):
     try:
-        # Replace the following with your MySQL connection URL
-        DATABASE_URL = "mysql+pymysql://username:password@host/database_name"
-        engine = create_engine(DATABASE_URL)
-        data = pd.read_sql(query, engine)
-        logging.info(f"Data fetched successfully for query: {query}")
-        return data
+        df = pd.read_sql(query, con=engine)
+        logging.info(f"Fetched data for query: {query[:50]}...")
+        return df
     except Exception as e:
-        logging.error(f"Error fetching data from MySQL: {e}")
+        logging.error(f"Error fetching data: {e}")
         raise
 
-def load_fact_data():
-    """
-    Load fact data from MySQL.
-    """
+def load_tables():
+    fact_df = fetch_data("SELECT * FROM fact_sales;")
+    dim_customer = fetch_data("SELECT * FROM dim_customer;")
+    dim_date = fetch_data("SELECT * FROM dim_date;")
+    dim_product = fetch_data("SELECT * FROM dim_product;")
+    dim_region = fetch_data("SELECT * FROM dim_region;")
+    return fact_df, dim_customer, dim_date, dim_product, dim_region
+
+def calculate_core_kpis(fact_df):
+    total_sales = fact_df['Sales'].sum()
+    total_orders = fact_df['Order_ID'].nunique()
+    avg_sales = total_sales / total_orders if total_orders != 0 else 0
+    return total_sales, total_orders, avg_sales
+
+
+def avg_sales_per_month(fact_df, dim_date):
     try:
-        query = "SELECT * FROM fact_sales;"
-        fact_df = fetch_data_from_mysql(query)
-        logging.info("Fact data loaded successfully.")
-        return fact_df
+        # Merge using OrderDateKey instead of DateKey
+        merged = pd.merge(fact_df, dim_date, left_on='OrderDateKey', right_on='DateKey', how='left')  
+
+        # Group by Month_Year and sum sales
+        monthly_sales = (
+            merged.groupby(['Year', 'Month'])['Sales']
+            .sum()
+            .reset_index()
+        )
+
+        # Calculate average monthly sales
+        avg_monthly_sales = monthly_sales['Sales'].mean()
+
+        logging.info(f"Average monthly sales calculated: ${avg_monthly_sales:,.2f}")
+        return avg_monthly_sales
     except Exception as e:
-        logging.error(f"Error loading fact data: {e}")
+        logging.error(f"Error calculating average monthly sales: {e}")
         raise
 
-def load_train_data():
-    """
-    Load training data (Customer Dimension) from MySQL.
-    """
-    try:
-        query = "SELECT * FROM dim_customer;"
-        dim_customer = fetch_data_from_mysql(query)
-        logging.info("Training data (dim_customer) loaded successfully.")
-        return dim_customer
-    except Exception as e:
-        logging.error(f"Error loading training data (dim_customer): {e}")
-        raise
+def customer_count_segment(dim_customer):
+    segment_group = dim_customer.groupby('Segment').size().reset_index(name='Customer_Count')
+    return segment_group
 
-def calculate_kpis(fact_df):
-    """
-    Calculate KPIs like total sales, total orders, and average sales/order.
-    """
-    try:
-        total_sales = fact_df['Sales'].sum()
-        total_orders = fact_df['Order_ID'].nunique()
-        avg_sales = total_sales / total_orders if total_orders != 0 else 0
-        logging.info(f"KPIs calculated successfully: Total Sales: {total_sales}, Total Orders: {total_orders}, Avg Sales: {avg_sales}")
-        return total_sales, total_orders, avg_sales
-    except Exception as e:
-        logging.error(f"Error calculating KPIs: {e}")
-        raise
 
-def top_selling_products(fact_df):
-    """
-    Get the top selling products from the fact data.
-    """
-    try:
-        top_products = fact_df.groupby('Product_Name').agg(Sales=('Sales', 'sum')).reset_index()
-        top_products = top_products.sort_values(by='Sales', ascending=False).head(5)
-        logging.info("Top selling products calculated successfully.")
-        return top_products
-    except Exception as e:
-        logging.error(f"Error calculating top selling products: {e}")
-        raise
 
-def average_delivery_time(dim_customer):
-    """
-    Calculate the average delivery time.
-    """
-    try:
-        avg_delivery = dim_customer['Delivery_Time'].mean()
-        logging.info(f"Average delivery time calculated successfully: {avg_delivery}")
-        return avg_delivery
-    except Exception as e:
-        logging.error(f"Error calculating average delivery time: {e}")
-        raise
+def monthly_sales_trend(fact_df, dim_date):
+    merged = fact_df.merge(dim_date[['DateKey', 'Month', 'Year']], left_on='OrderDateKey', right_on='DateKey', how='left')
+    merged['Month_Year'] = merged['Month'].astype(str) + '-' + merged['Year'].astype(str)
+    trend = merged.groupby('Month_Year').agg(Sales=('Sales', 'sum')).reset_index()
+    return trend.sort_values('Month_Year')
 
-def monthly_sales(fact_df):
-    """
-    Calculate monthly sales trend.
-    """
-    try:
-        fact_df['Month'] = fact_df['Order_Date'].dt.to_period('M')
-        monthly = fact_df.groupby('Month').agg(Sales=('Sales', 'sum')).reset_index()
-        logging.info("Monthly sales calculated successfully.")
-        return monthly
-    except Exception as e:
-        logging.error(f"Error calculating monthly sales: {e}")
-        raise
 
-def segment_sales(fact_df, dim_customer):
-    """
-    Calculate sales by customer segment.
-    """
-    try:
-        segment = fact_df.merge(dim_customer[['Customer_ID', 'Segment']], on='Customer_ID', how='left')
-        segment_sales = segment.groupby('Segment').agg(Sales=('Sales', 'sum')).reset_index()
-        logging.info("Sales by customer segment calculated successfully.")
-        return segment_sales
-    except Exception as e:
-        logging.error(f"Error calculating sales by segment: {e}")
-        raise
+def sales_by_year(fact_df, dim_date):
+    merged = fact_df.merge(dim_date[['DateKey', 'Year']], left_on='OrderDateKey', right_on='DateKey', how='left')
+    yearly_sales = merged.groupby('Year').agg(Sales=('Sales', 'sum')).reset_index()
+    return yearly_sales.sort_values('Year')
 
-def create_date_dimension(start_date, end_date):
-    """
-    Create a date dimension table with attributes such as day, month, quarter, and year.
-    """
-    try:
-        # Generate a date range between start_date and end_date
-        date_range = pd.date_range(start=start_date, end=end_date, freq='D')
 
-        # Create the date dimension dataframe
-        date_dim = pd.DataFrame(date_range, columns=['Date'])
-        date_dim['Day'] = date_dim['Date'].dt.day
-        date_dim['Month'] = date_dim['Date'].dt.month
-        date_dim['Quarter'] = date_dim['Date'].dt.quarter
-        date_dim['Year'] = date_dim['Date'].dt.year
-        date_dim['Month_Name'] = date_dim['Date'].dt.strftime('%B')
-        date_dim['Day_Of_Week'] = date_dim['Date'].dt.day_name()
-        date_dim['Day_Of_Year'] = date_dim['Date'].dt.dayofyear
-        date_dim['Is_Weekend'] = date_dim['Date'].dt.weekday >= 5
+def sales_by_quarter(fact_df, dim_date):
+    merged = fact_df.merge(dim_date[['DateKey', 'Quarter', 'Year']], left_on='OrderDateKey', right_on='DateKey', how='left')
+    merged['Quarter_Year'] = 'Q' + merged['Quarter'].astype(str) + '-' + merged['Year'].astype(str)
+    q_sales = merged.groupby('Quarter_Year').agg(Sales=('Sales', 'sum')).reset_index()
+    return q_sales.sort_values('Quarter_Year')
 
-        # Add a surrogate key for the date dimension
-        date_dim['DateKey'] = date_dim['Date'].dt.strftime('%Y%m%d').astype(int)
 
-        logging.info("Date dimension table created successfully.")
-        return date_dim
-    except Exception as e:
-        logging.error(f"Failed to create date dimension: {e}")
-        raise
+def weekend_sales(fact_df, dim_date):
+    merged = fact_df.merge(dim_date[['DateKey', 'Is_Weekend']], left_on='OrderDateKey', right_on='DateKey', how='left')
+    result = merged.groupby('Is_Weekend').agg(Sales=('Sales', 'sum')).reset_index()
+    result['Type'] = result['Is_Weekend'].apply(lambda x: 'Weekend' if x else 'Weekday')
+    return result[['Type', 'Sales']]
 
-# # Example Usage
 
-# if __name__ == "__main__":
-#     # Connect and load fact data and customer data
-#     try:
-#         fact_df = load_fact_data()
-#         dim_customer = load_train_data()
+def top_states_sales(fact_df):
+    state_sales = fact_df.groupby('State').agg(Sales=('Sales', 'sum')).reset_index()
+    return state_sales.sort_values(by='Sales', ascending=False).head(5)
 
-#         # Calculate KPIs
-#         total_sales, total_orders, avg_sales = calculate_kpis(fact_df)
-#         avg_delivery = average_delivery_time(dim_customer)
+def top_states_sales(fact_df, dim_region):
+    merged = fact_df.merge(dim_region[['RegionKey', 'State']], on='RegionKey', how='left')
+    state_sales = merged.groupby('State').agg(Sales=('Sales', 'sum')).reset_index()
+    return state_sales.sort_values(by='Sales', ascending=False).head(5)
 
-#         # Output KPIs
-#         print(f"Total Sales: ${total_sales:,.2f}")
-#         print(f"Total Orders: {total_orders}")
-#         print(f"Avg Sales per Order: ${avg_sales:,.2f}")
-#         print(f"Avg Delivery Time: {avg_delivery} days")
+def top_5_products(fact_df, dim_product):
+    # Merge on Product_ID or your specific key
+    merged_df = fact_df.merge(dim_product, on='ProductKey', how='left')
+    
+    top_products = (
+        merged_df.groupby('Product_Name')
+        .agg(Sales=('Sales', 'sum'))
+        .reset_index()
+        .sort_values(by='Sales', ascending=False)
+        .head(5)
+    )
+    return top_products
 
-#         # Create Date Dimension Table
-#         date_dim = create_date_dimension("2021-01-01", "2021-12-31")
-#         print(f"Date Dimension Created with {len(date_dim)} rows.")
-
-#     except Exception as e:
-#         logging.error(f"An error occurred: {e}")
