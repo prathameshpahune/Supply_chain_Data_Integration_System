@@ -84,7 +84,7 @@ def show_kpi_page():
         avg_sales_m = avg_sales_per_month(fact_df, dim_date)
 
         # Set your target sales (can be based on avg monthly or set manually)
-        target_sales = avg_sales_m  
+        target_sales = 500000
 
         st.subheader("🔢 Key Performance Indicators")
         col1, col2, col3 = st.columns(3)
