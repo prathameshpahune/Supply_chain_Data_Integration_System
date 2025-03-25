@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def fetch_data(query):
     try:
-        df = pd.read_sql(query, con=engine)
+        df = pd.read_sql(query, con=engine)    # Read Tables in dataframe
         logging.info(f"Fetched data for query: {query[:50]}...")
         return df
     except Exception as e:
@@ -30,6 +30,10 @@ def calculate_core_kpis(fact_df):
     avg_sales = total_sales / total_orders if total_orders != 0 else 0
     return total_sales, total_orders, avg_sales
 
+def sales_by_region(fact_df, dim_region):
+    merged = fact_df.merge(dim_region[['RegionKey', 'Region']], on='RegionKey', how='left')
+    region_sales = merged.groupby('Region').agg(Sales=('Sales', 'sum')).reset_index()
+    return region_sales.sort_values(by='Sales', ascending=False)
 
 def avg_sales_per_month(fact_df, dim_date):
     try:
@@ -59,9 +63,11 @@ def customer_count_segment(dim_customer):
 
 def monthly_sales_trend(fact_df, dim_date):
     merged = fact_df.merge(dim_date[['DateKey', 'Month', 'Year']], left_on='OrderDateKey', right_on='DateKey', how='left')
-    merged['Month_Year'] = merged['Month'].astype(str) + '-' + merged['Year'].astype(str)
-    trend = merged.groupby('Month_Year').agg(Sales=('Sales', 'sum')).reset_index()
-    return trend.sort_values('Month_Year')
+    merged['Month_Year'] = merged['Month'].astype(str) + '-' + merged['Year'].astype(str)   # Create a new column for sorting
+    
+    trend = merged.groupby(['Year', 'Month', 'Month_Year']).agg(Sales=('Sales', 'sum')).reset_index()
+    return trend.sort_values(by=['Year', 'Month'])   # Sort by Year first, then by Month
+
 
 
 def sales_by_year(fact_df, dim_date):
