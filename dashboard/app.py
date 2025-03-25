@@ -2,6 +2,9 @@ import logging
 import streamlit as st
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+st.set_page_config(page_title="Sales Dashboard", layout="wide")
+
 from kpi import (
     avg_sales_per_month,
     load_tables,
@@ -12,11 +15,19 @@ from kpi import (
     customer_count_segment,
     monthly_sales_trend,
     sales_by_quarter,
-    top_5_products
+    top_5_products,
+    sales_by_region
 )
 
 # Configure logging
-logging.basicConfig(filename='../etl_process.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Set up file handler manually
+file_handler = logging.FileHandler('etl_process.log', mode='w')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+# Add to root logger
+logging.getLogger().addHandler(file_handler)
+logging.getLogger().setLevel(logging.INFO)
+
 
 # Load data once for all pages
 try:
@@ -57,8 +68,8 @@ def show_home_page():
 
 def show_diagram():
     try:
-        image = "../etl.png"
-        st.image(image, caption="Database ERD Diagram", use_container_width=True)
+        image_path = "c://Users//PRATHAMESH PAHUNE//Documents//Project//dashboard//ERD.png"
+        st.image(image_path, caption="Database ERD Diagram", use_container_width=True)
     except Exception as e:
         st.error(f"Error loading image: {e}")
 
@@ -106,6 +117,8 @@ def show_kpi_page():
         - You're at **{progress_percent:.1f}%** of your goal.
         """)
 
+        
+
         logging.info("KPI Overview page with monthly trend chart rendered.")
     except Exception as e:
         logging.error(f"Error in KPI Overview: {e}")
@@ -132,7 +145,21 @@ def show_top_products_page():
         logging.error(f"Error in Top Products page: {e}")
         st.error("Error loading Top Products page.")
 
-# Page: Sales Trends
+
+def show_sales_by_region():
+    st.markdown("---")
+    st.subheader("🌏 Sales by Region")
+    region_sales = sales_by_region(fact_df, dim_region)
+    st.dataframe(region_sales)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=region_sales, x='Sales', y='Region', palette='coolwarm', ax=ax)
+    ax.set_title('Sales by Region')
+    ax.set_xlabel('Sales ($)')
+    ax.set_ylabel('Region')
+    st.pyplot(fig)
+
+
 def show_sales_trends_page():
     try:
         st.title("📊 Sales Trends")
@@ -206,10 +233,10 @@ def show_sales_by_segment_page():
         st.error("Error loading Sales by Segment page.")
 
 
+
 # Main navigation
 def main():
-    st.set_page_config(page_title="Sales Dashboard", layout="wide")
-    page = st.sidebar.radio("Select a page:", ["Home", "ERD Diagram", "KPI Overview", "Top Products", "Sales Trends", "Sales by Segment"])
+    page = st.sidebar.radio("Select a page:", ["Home", "ERD Diagram", "KPI Overview", "Top Products", "Sales Trends", "Sales by Segment", "Sales by Region"])
 
     try:
         if page == "Home":
@@ -224,6 +251,8 @@ def main():
             show_sales_trends_page()
         elif page == "Sales by Segment":
             show_sales_by_segment_page()
+        elif page == "Sales by Region":
+            show_sales_by_region()
     except Exception as e:
         logging.error(f"Error rendering page: {e}")
         st.error("An error occurred while loading the page. Please try again later.")
