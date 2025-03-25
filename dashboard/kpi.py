@@ -35,6 +35,17 @@ def sales_by_region(fact_df, dim_region):
     region_sales = merged.groupby('Region').agg(Sales=('Sales', 'sum')).reset_index()
     return region_sales.sort_values(by='Sales', ascending=False)
 
+def sales_by_category(fact_df, dim_product):
+    merged = fact_df.merge(dim_product[['ProductKey', 'Category']], on='ProductKey', how='left')
+    category_sales = merged.groupby('Category').agg(Sales=('Sales', 'sum')).reset_index()
+    return category_sales.sort_values(by='Sales', ascending=False)
+
+def sales_by_subcategory(fact_df, dim_product):
+    merged = fact_df.merge(dim_product[['ProductKey', 'Sub_Category']], on='ProductKey', how='left')
+    subcategory_sales = merged.groupby('Sub_Category').agg(Sales=('Sales', 'sum')).reset_index()
+    return subcategory_sales.sort_values(by='Sales', ascending=False)
+
+
 def avg_sales_per_month(fact_df, dim_date):
     try:
         # Merge using OrderDateKey instead of DateKey
