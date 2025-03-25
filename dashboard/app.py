@@ -16,7 +16,9 @@ from kpi import (
     monthly_sales_trend,
     sales_by_quarter,
     top_5_products,
-    sales_by_region
+    sales_by_region,
+    sales_by_category,
+    sales_by_subcategory
 )
 
 # Configure logging
@@ -160,6 +162,33 @@ def show_sales_by_region():
     st.pyplot(fig)
 
 
+def show_sales_by_category():
+    st.markdown("---")
+    st.subheader("💼 Sales by Category")
+    category_sales = sales_by_category(fact_df, dim_product)
+    st.dataframe(category_sales)
+
+    fig2, ax2 = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=category_sales , x='Category', y='Sales', palette='viridis', ax=ax2)
+    ax2.set_title('Sales by Category')
+    ax2.set_ylabel('Sales ($)')
+    ax2.set_xlabel('Category')
+    st.pyplot(fig2)
+
+    # Sales by Sub-Category
+    st.markdown("---")
+    st.subheader("📂 Sales by Sub-Category")
+    subcategory_sales = sales_by_subcategory(fact_df, dim_product)
+    st.dataframe(subcategory_sales)
+
+    fig2, ax2 = plt.subplots(figsize=(12, 6))
+    sns.barplot(data=subcategory_sales, x='Sales', y='Sub_Category', palette='viridis', ax=ax2)
+    ax2.set_title('Sales by Sub-Category')
+    ax2.set_xlabel('Sales ($)')
+    ax2.set_ylabel('Sub-Category')
+    st.pyplot(fig2)
+    
+
 def show_sales_trends_page():
     try:
         st.title("📊 Sales Trends")
@@ -236,7 +265,7 @@ def show_sales_by_segment_page():
 
 # Main navigation
 def main():
-    page = st.sidebar.radio("Select a page:", ["Home", "ERD Diagram", "KPI Overview", "Top Products", "Sales Trends", "Sales by Segment", "Sales by Region"])
+    page = st.sidebar.radio("Select a page:", ["Home", "ERD Diagram", "KPI Overview", "Top Products", "Sales Trends", "Sales by Segment", "Sales by Region", "Sales by Category"])
 
     try:
         if page == "Home":
@@ -253,6 +282,8 @@ def main():
             show_sales_by_segment_page()
         elif page == "Sales by Region":
             show_sales_by_region()
+        elif page == "Sales by Category":
+            show_sales_by_category()
     except Exception as e:
         logging.error(f"Error rendering page: {e}")
         st.error("An error occurred while loading the page. Please try again later.")
